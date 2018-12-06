@@ -1,7 +1,10 @@
 import sys
+import os
+import glob
 import cv2
 import torch
 import numpy as np
+from numpy import linalg as LA
 from math import ceil
 from torch.autograd import Variable
 from scipy.ndimage import imread
@@ -9,9 +12,38 @@ import models
 """
 Contact: Deqing Sun (deqings@nvidia.com); Zhile Ren (jrenzhile@gmail.com)
 """
+
+def rescaleMagnitudeOF(mOfChannel):
+    return (mOfChannel+1)*(127.5)
+
+def writeUOFFile(fileTarget, flowData):
+    mag = LA.norm(flowData, axis=2)
+    uNorm = rescaleMagnitudeOF(np.divide(flowData[...,0], mag))
+    vNorm = rescaleMagnitudeOF(np.divide(flowData[...,1], mag))
+
+    magNorm=np.divide(mag, np.max(mag))*255
+    uFlow = np.stack((magNorm,uNorm, vNorm, ), axis=-1)
+
+    cv2.normalize(uFlow, uFlow, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+    cv2.imwrite(fileTarget, uFlow)
+
+def writeMeanSubtractedUOFFile(fileTarget, flowData):
+    flowData[...,0] = flowData[...,0] - np.mean(flowData[...,0])
+    flowData[...,1] = flowData[...,1] - np.mean(flowData[...,1])
+
+    mag = LA.norm(flowData, axis=2)
+    uNorm = rescaleMagnitudeOF(np.divide(flowData[...,0], mag))
+    vNorm = rescaleMagnitudeOF(np.divide(flowData[...,1], mag))
+
+    magNorm=np.divide(mag, np.max(mag))
+    uFlow = np.stack((magNorm,uNorm, vNorm, ), axis=-1)
+
+    cv2.normalize(uFlow, uFlow, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+    cv2.imwrite(fileTarget, uFlow)
+
 def writeFlowFile(filename,uv):
 	"""
-	According to the matlab code of Deqing Sun and c++ source code of Daniel Scharstein  
+	According to the matlab code of Deqing Sun and c++ source code of Daniel Scharstein
 	Contact: dqsun@cs.brown.edu
 	Contact: schar@middlebury.edu
 	"""
@@ -26,58 +58,95 @@ def writeFlowFile(filename,uv):
 		f.write(H.tobytes())
 		f.write(uv.tobytes())
 
+def processImages(net, im1_fn, im2_fn, flow_fn, flow_ms_fn):
+    im_all = [imread(img) for img in [im1_fn, im2_fn]]
+    im_all = [im[:, :, :3] for im in im_all]
 
-im1_fn = 'data/frame_0010.png';
-im2_fn = 'data/frame_0011.png';
-flow_fn = './tmp/frame_0010.flo';
+    # rescale the image size to be multiples of 64
+    divisor = 64.
+    H = im_all[0].shape[0]
+    W = im_all[0].shape[1]
 
-if len(sys.argv) > 1:
-    im1_fn = sys.argv[1]
-if len(sys.argv) > 2:
-    im2_fn = sys.argv[2]
-if len(sys.argv) > 3:
-    flow_fn = sys.argv[3]
+    H_ = int(ceil(H/divisor) * divisor)
+    W_ = int(ceil(W/divisor) * divisor)
+    for i in range(len(im_all)):
+    	im_all[i] = cv2.resize(im_all[i], (W_, H_))
 
-pwc_model_fn = './pwc_net.pth.tar';
+    for _i, _inputs in enumerate(im_all):
+    	im_all[_i] = im_all[_i][:, :, ::-1]
+    	im_all[_i] = 1.0 * im_all[_i]/255.0
 
-im_all = [imread(img) for img in [im1_fn, im2_fn]]
-im_all = [im[:, :, :3] for im in im_all]
+    	im_all[_i] = np.transpose(im_all[_i], (2, 0, 1))
+    	im_all[_i] = torch.from_numpy(im_all[_i])
+    	im_all[_i] = im_all[_i].expand(1, im_all[_i].size()[0], im_all[_i].size()[1], im_all[_i].size()[2])
+    	im_all[_i] = im_all[_i].float()
 
-# rescale the image size to be multiples of 64
-divisor = 64.
-H = im_all[0].shape[0]
-W = im_all[0].shape[1]
+    im_all = torch.autograd.Variable(torch.cat(im_all,1).cuda(), volatile=True)
+    net.eval()
+    flo = net(im_all)
+    flo = flo[0] * 20.0
+    flo = flo.cpu().data.numpy()
 
-H_ = int(ceil(H/divisor) * divisor)
-W_ = int(ceil(W/divisor) * divisor)
-for i in range(len(im_all)):
-	im_all[i] = cv2.resize(im_all[i], (W_, H_))
+    # scale the flow back to the input size
+    flo = np.swapaxes(np.swapaxes(flo, 0, 1), 1, 2) #
+    u_ = cv2.resize(flo[:,:,0],(W,H))
+    v_ = cv2.resize(flo[:,:,1],(W,H))
+    u_ *= W/ float(W_)
+    v_ *= H/ float(H_)
+    flo = np.dstack((u_,v_))
 
-for _i, _inputs in enumerate(im_all):
-	im_all[_i] = im_all[_i][:, :, ::-1]
-	im_all[_i] = 1.0 * im_all[_i]/255.0
-	
-	im_all[_i] = np.transpose(im_all[_i], (2, 0, 1))
-	im_all[_i] = torch.from_numpy(im_all[_i])
-	im_all[_i] = im_all[_i].expand(1, im_all[_i].size()[0], im_all[_i].size()[1], im_all[_i].size()[2])	
-	im_all[_i] = im_all[_i].float()
-    
-im_all = torch.autograd.Variable(torch.cat(im_all,1).cuda(), volatile=True)
+    writeUOFFile(flow_fn, flo)
+    writeMeanSubtractedUOFFile(flow_ms_fn, flo)
 
-net = models.pwc_dc_net(pwc_model_fn)
-net = net.cuda()
-net.eval()
+def processVideo(videoKey):
+    print('process',videoKey)
 
-flo = net(im_all)
-flo = flo[0] * 20.0
-flo = flo.cpu().data.numpy()
+    #Load Net
+    pwc_model_fn = '/home/jcleon/Software/PWC-Net/PyTorch/pwc_net.pth.tar'
+    net = models.pwc_dc_net(pwc_model_fn)
+    net = net.cuda()
 
-# scale the flow back to the input size 
-flo = np.swapaxes(np.swapaxes(flo, 0, 1), 1, 2) # 
-u_ = cv2.resize(flo[:,:,0],(W,H))
-v_ = cv2.resize(flo[:,:,1],(W,H))
-u_ *= W/ float(W_)
-v_ *= H/ float(H_)
-flo = np.dstack((u_,v_))
+    framesDir = os.path.join(framesRoot, videoKey)
+    allVideoFrames = glob.glob(framesDir + '/*.jpg')
+    allVideoFrames.sort()
 
-writeFlowFile(flow_fn, flo)
+    for frameIdx in range(len(allVideoFrames)-1):
+        frame0 = allVideoFrames[frameIdx]
+        frame1 = allVideoFrames[frameIdx+1]
+        baseName0 = os.path.basename(frame0)
+
+        if not os.path.exists(os.path.join(targetFlow, videoKey )):
+            os.makedirs(os.path.join(targetFlow, videoKey ))
+            print ('created ', os.path.join(targetFlow, videoKey ))
+
+        if not os.path.exists(os.path.join(targetMeanSubtractedFlow, videoKey )):
+            os.makedirs(os.path.join(targetMeanSubtractedFlow, videoKey ))
+            print ('created ', os.path.join(targetMeanSubtractedFlow, videoKey ))
+
+        flowFileFWD = os.path.join(targetFlow, videoKey, baseName0[:-4]+'-fwd.png')
+        flowFileMSFWD = os.path.join(targetMeanSubtractedFlow, videoKey, baseName0[:-4]+'-fwd.png')
+        processImages(net, frame0, frame1, flowFileFWD, flowFileMSFWD)
+
+        flowFileBWD = os.path.join(targetFlow, videoKey, baseName0[:-4]+'-bwd.png')
+        flowFileMSBWD = os.path.join(targetMeanSubtractedFlow, videoKey, baseName0[:-4]+'-bwd.png')
+        processImages(net, frame1, frame0, flowFileBWD, flowFileMSBWD)
+    net = None
+
+
+
+framesRoot='/home/jcleon/Storage/disk0/Datasets/youtubeVOS/train/JPEGImages'
+targetFlow='/home/jcleon/Storage/ssd0/YTVOSData/uOFPWC/normal'
+targetMeanSubtractedFlow='/home/jcleon/Storage/ssd0/YTVOSData/uOFPWC/meanSubtracted'
+"""
+allVideoKeys = os.listdir(framesRoot)
+allVideoKeys.sort()
+for aVideoKey in allVideoKeys:
+    processVideo(aVideoKey)
+"""
+parArgz=os.listdir(framesRoot)
+parArgz.sort()
+
+#DO NOT MOVE THIS IMPORT AND INSTANTIATION, LIKE SERIUOSLY!!!
+import multiprocessing as mp
+pool = mp.Pool(processes=8)
+pool.map(processVideo, parArgz)
