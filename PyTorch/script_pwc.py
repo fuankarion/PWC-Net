@@ -135,9 +135,9 @@ def processVideo(tupleArgz):
 
 
 
-framesRoot = '/home/jcleon/Storage/disk0/Datasets/youtubeVOS/train/JPEGImages'
-flowRoot = '/home/jcleon/Storage/ssd0/YTVOSData/uOFPWC/normal'
-meanSubtractedFlowRoot = '/home/jcleon/Storage/ssd0/YTVOSData/uOFPWC/meanSubtracted'
+framesRoot = '/home/jcleon/Datasets/a2d/Frames'
+flowRoot = '/home/jcleon/Datasets/a2d/uof'
+meanSubtractedFlowRoot = '/home/jcleon/Datasets/a2d/msuof'
 
 allVideoKeys = os.listdir(framesRoot)
 allVideoKeys.sort()
