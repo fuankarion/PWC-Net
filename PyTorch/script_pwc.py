@@ -149,5 +149,5 @@ for aVideoKey in allVideoKeys:
 
 #DO NOT MOVE THIS IMPORT AND INSTANTIATION, LIKE SERIUOSLY!!!
 import multiprocessing as mp
-pool = mp.Pool(processes=6)
+pool = mp.Pool(processes=9)
 pool.map(processVideo, parArgz)
