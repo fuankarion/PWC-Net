@@ -103,7 +103,7 @@ def processVideo(tupleArgz):
     print('process',videoKey)
 
     #Load Net
-    pwc_model_fn = '/home/jcleon/Software/PWC-Net/PyTorch/pwc_net.pth.tar'
+    pwc_model_fn = '/Software/PWC-Net/PyTorch/pwc_net.pth.tar'
     net = models.pwc_dc_net(pwc_model_fn)
     net = net.cuda()
 
@@ -136,8 +136,8 @@ def processVideo(tupleArgz):
 
 
 framesRoot = '/home/jcleon/jcleon/A2D/Frames'
-flowRoot = '/home/jcleon/jcleon/A2D/Frames/uof'
-meanSubtractedFlowRoot = '/home/jcleon/jcleon/A2D/Frames/msuof'
+flowRoot = '/home/jcleon/jcleon/A2D/uof'
+meanSubtractedFlowRoot = '/home/jcleon/jcleon/A2D/msuof'
 
 allVideoKeys = os.listdir(framesRoot)
 allVideoKeys.sort()
