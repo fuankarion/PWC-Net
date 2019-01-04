@@ -98,7 +98,8 @@ def processImages(net, im1_fn, im2_fn, flow_fn, flow_ms_fn):
     writeUOFFile(flow_fn, flo)
     writeMeanSubtractedUOFFile(flow_ms_fn, flo)
 
-def processVideo(videoKey):
+def processVideo(tupleArgz):
+    videoKey, targetFlow, targetMeanSubtractedFlow = tupleArgz
     print('process',videoKey)
 
     #Load Net
@@ -134,19 +135,20 @@ def processVideo(videoKey):
 
 
 
-framesRoot='/home/jcleon/Storage/disk0/Datasets/youtubeVOS/train/JPEGImages'
-targetFlow='/home/jcleon/Storage/ssd0/YTVOSData/uOFPWC/normal'
-targetMeanSubtractedFlow='/home/jcleon/Storage/ssd0/YTVOSData/uOFPWC/meanSubtracted'
-"""
+framesRoot = '/home/jcleon/Storage/disk0/Datasets/youtubeVOS/train/JPEGImages'
+flowRoot = '/home/jcleon/Storage/ssd0/YTVOSData/uOFPWC/normal'
+meanSubtractedFlowRoot = '/home/jcleon/Storage/ssd0/YTVOSData/uOFPWC/meanSubtracted'
+
 allVideoKeys = os.listdir(framesRoot)
 allVideoKeys.sort()
+parArgz=[]
 for aVideoKey in allVideoKeys:
-    processVideo(aVideoKey)
-"""
-parArgz=os.listdir(framesRoot)
-parArgz.sort()
+
+    tupleArgz=(aVideoKey, framesRoot, flowRoot)
+    parArgz.append(tupleArgz)
+    processVideo(tupleArgz)
 
 #DO NOT MOVE THIS IMPORT AND INSTANTIATION, LIKE SERIUOSLY!!!
-import multiprocessing as mp
-pool = mp.Pool(processes=8)
-pool.map(processVideo, parArgz)
+#import multiprocessing as mp
+#pool = mp.Pool(processes=8)
+#pool.map(processVideo, parArgz)
