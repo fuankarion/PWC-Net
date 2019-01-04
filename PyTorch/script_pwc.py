@@ -143,12 +143,11 @@ allVideoKeys = os.listdir(framesRoot)
 allVideoKeys.sort()
 parArgz=[]
 for aVideoKey in allVideoKeys:
-
     tupleArgz=(aVideoKey, framesRoot, flowRoot)
     parArgz.append(tupleArgz)
-    processVideo(tupleArgz)
+    #processVideo(tupleArgz)
 
 #DO NOT MOVE THIS IMPORT AND INSTANTIATION, LIKE SERIUOSLY!!!
-#import multiprocessing as mp
-#pool = mp.Pool(processes=8)
-#pool.map(processVideo, parArgz)
+import multiprocessing as mp
+pool = mp.Pool(processes=6)
+pool.map(processVideo, parArgz)
