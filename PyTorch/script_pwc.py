@@ -98,7 +98,7 @@ def processImages(net, im1_fn, im2_fn, flow_fn):
     writeUOFFile(flow_fn, flo)
 
 def processVideo(tupleArgz):
-    videoKey, targetFlow = tupleArgz
+    videoKey, framesRoot, targetFlow = tupleArgz
     print('process',videoKey)
 
     #Load Net
