@@ -128,7 +128,7 @@ def processVideo(tupleArgz):
 
 
 
-framesRoot = '/home/jcleon/jcleon/a2d/frames'
+framesRoot = '/home/jcleon/jcleon/a2d/Frames'
 flowRoot = '/home/jcleon/jcleon/a2d/uof'
 
 allVideoKeys = os.listdir(framesRoot)
