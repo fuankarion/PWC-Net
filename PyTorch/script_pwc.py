@@ -120,10 +120,10 @@ def processVideo(tupleArgz):
         baseName0 = os.path.basename(frame0)
 
         flowFileFWD = os.path.join(targetFlow, videoKey, baseName0[:-4]+'-fwd.png')
-        processImages(net, frame0, frame1, flowFileFWD, flowFileMSFWD)
+        processImages(net, frame0, frame1, flowFileFWD)
 
         flowFileBWD = os.path.join(targetFlow, videoKey, baseName0[:-4]+'-bwd.png')
-        processImages(net, frame1, frame0, flowFileBWD, flowFileMSBWD)
+        processImages(net, frame1, frame0, flowFileBWD)
     net = None
 
 
