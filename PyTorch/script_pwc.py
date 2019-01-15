@@ -58,7 +58,7 @@ def writeFlowFile(filename,uv):
 		f.write(H.tobytes())
 		f.write(uv.tobytes())
 
-def processImages(net, im1_fn, im2_fn, flow_fn, flow_ms_fn):
+def processImages(net, im1_fn, im2_fn, flow_fn):
     im_all = [imread(img) for img in [im1_fn, im2_fn]]
     im_all = [im[:, :, :3] for im in im_all]
 
@@ -96,10 +96,9 @@ def processImages(net, im1_fn, im2_fn, flow_fn, flow_ms_fn):
     flo = np.dstack((u_,v_))
 
     writeUOFFile(flow_fn, flo)
-    writeMeanSubtractedUOFFile(flow_ms_fn, flo)
 
 def processVideo(tupleArgz):
-    videoKey, targetFlow, targetMeanSubtractedFlow = tupleArgz
+    videoKey, targetFlow = tupleArgz
     print('process',videoKey)
 
     #Load Net
@@ -111,33 +110,26 @@ def processVideo(tupleArgz):
     allVideoFrames = glob.glob(framesDir + '/*.jpg')
     allVideoFrames.sort()
 
+    if not os.path.exists(os.path.join(targetFlow, videoKey )):
+        os.makedirs(os.path.join(targetFlow, videoKey ))
+        print ('created ', os.path.join(targetFlow, videoKey ))
+
     for frameIdx in range(len(allVideoFrames)-1):
         frame0 = allVideoFrames[frameIdx]
         frame1 = allVideoFrames[frameIdx+1]
         baseName0 = os.path.basename(frame0)
 
-        if not os.path.exists(os.path.join(targetFlow, videoKey )):
-            os.makedirs(os.path.join(targetFlow, videoKey ))
-            print ('created ', os.path.join(targetFlow, videoKey ))
-
-        if not os.path.exists(os.path.join(targetMeanSubtractedFlow, videoKey )):
-            os.makedirs(os.path.join(targetMeanSubtractedFlow, videoKey ))
-            print ('created ', os.path.join(targetMeanSubtractedFlow, videoKey ))
-
         flowFileFWD = os.path.join(targetFlow, videoKey, baseName0[:-4]+'-fwd.png')
-        flowFileMSFWD = os.path.join(targetMeanSubtractedFlow, videoKey, baseName0[:-4]+'-fwd.png')
         processImages(net, frame0, frame1, flowFileFWD, flowFileMSFWD)
 
         flowFileBWD = os.path.join(targetFlow, videoKey, baseName0[:-4]+'-bwd.png')
-        flowFileMSBWD = os.path.join(targetMeanSubtractedFlow, videoKey, baseName0[:-4]+'-bwd.png')
         processImages(net, frame1, frame0, flowFileBWD, flowFileMSBWD)
     net = None
 
 
 
-framesRoot = '/home/jcleon/jcleon/A2D/Frames'
+framesRoot = '/home/jcleon/jcleon/A2D/frames'
 flowRoot = '/home/jcleon/jcleon/A2D/uof'
-meanSubtractedFlowRoot = '/home/jcleon/jcleon/A2D/msuof'
 
 allVideoKeys = os.listdir(framesRoot)
 allVideoKeys.sort()
@@ -145,7 +137,6 @@ parArgz=[]
 for aVideoKey in allVideoKeys:
     tupleArgz=(aVideoKey, framesRoot, flowRoot)
     parArgz.append(tupleArgz)
-    #processVideo(tupleArgz)
 
 #DO NOT MOVE THIS IMPORT AND INSTANTIATION, LIKE SERIUOSLY!!!
 import multiprocessing as mp
