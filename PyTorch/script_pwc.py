@@ -128,8 +128,8 @@ def processVideo(tupleArgz):
 
 
 
-framesRoot = '/home/jcleon/jcleon/A2D/frames'
-flowRoot = '/home/jcleon/jcleon/A2D/uof'
+framesRoot = '/home/jcleon/jcleon/a2d/frames'
+flowRoot = '/home/jcleon/jcleon/a2d/uof'
 
 allVideoKeys = os.listdir(framesRoot)
 allVideoKeys.sort()
